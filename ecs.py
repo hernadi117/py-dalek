@@ -65,8 +65,8 @@ class World:
         return ret
         
 
-    def add_system(self, system: System) -> None:
-        self.systems.append(system)
+    def add_system(self, *system: System) -> None:
+        self.systems.extend(*system)
 
 
     def update(self, *args, **kwargs) -> None:

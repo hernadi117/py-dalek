@@ -1,14 +1,13 @@
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
+from functools import partial, cache
 from dataclasses import dataclass
 from itertools import count
-from typing import Type, NewType, Generator, Iterable
+from typing import Type, NewType, TypeVar, Generator, Iterable
 from collections import defaultdict
 
 EntityID = NewType("EntityID", int)
-
-
-class Component(ABC):
-    pass
+Component = TypeVar("Component")
+component = partial(dataclass, slots=True)
 
 
 class System(ABC):

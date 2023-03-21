@@ -44,12 +44,15 @@ class World:
         pass
     
     
+    @cache
     def has_component(self, entity: EntityID, *component_type: Type[Component]) -> bool:
         # Perf improvement capability: bind dict to local scope first.
         # Perf improvement capability: cache this calculation.
         # Maybe remove if we do not need it.
         return all(ct in self.entities[entity] for ct in component_type)
     
+    
+    @cache
     def get_component(self, *component_type: Type[Component]) -> list[tuple[EntityID, list[Component]]]:
         # Perf improvement capability: cache this calculation
         # Perf improvement capability: bind dict to local scope first.
@@ -63,6 +66,10 @@ class World:
             ret.append((entity, [self.entities[entity][ct] for ct in component_type]))
         return ret
         
+
+    def clear_cache(self) -> None:
+        self.get_component.cache_clear()
+        self.has_component.cache_clear()
 
     def add_system(self, *system: System) -> None:
         self.systems.extend(*system)

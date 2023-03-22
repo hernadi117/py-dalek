@@ -20,10 +20,11 @@ class System(ABC):
 class World:
     
     def __init__(self) -> None:
-        self.systems: list[System] = []
-        self.components: defaultdict[Type[Component], set[EntityID]] = defaultdict(set)
         self.entities: dict[EntityID, dict[Type[Component], Component]] = defaultdict(dict)
+        self.components: defaultdict[Type[Component], set[EntityID]] = defaultdict(set)
+        self.systems: list[System] = []
         self.next_entity_id: EntityID = EntityID(0)
+        self.to_remove: set[EntityID] = set()
 
 
     def next_id(self) -> EntityID:
@@ -39,11 +40,25 @@ class World:
             self.components[ct].add(entity)
         return entity
     
-    def remove_entity(self, *entity: EntityID) -> None:
-        # TODO: Postpone entity to pre-system update?
-        pass
+    def mark_entity_for_removal(self, *entity: EntityID) -> None:
+        self.to_remove.update(entity)
     
-    
+    def remove_marked_entities(self) -> None:
+        for entity in self.to_remove:
+            for ct in self.entities[entity]:
+                if entities := self.components[ct]:
+                    entities.remove(entity)
+                else:
+                    del self.components[ct]
+            
+            del self.entities[entity]
+        
+        # Can we sidestep requiring double hashing here?
+                
+        self.to_remove.clear()
+        self.clear_cache()
+
+
     @cache
     def has_component(self, entity: EntityID, *component_type: Type[Component]) -> bool:
         # Perf improvement capability: bind dict to local scope first.
@@ -56,16 +71,19 @@ class World:
     def get_component(self, *component_type: Type[Component]) -> list[tuple[EntityID, list[Component]]]:
         # Perf improvement capability: cache this calculation
         # Perf improvement capability: bind dict to local scope first.
-        # Perf improvement capability: make this a generator function.
         # Perf improvement capability: sort sets by length first since intersection is: O(min(len(set1), len(set2), ..., len(setn)))
+        # possibly store sets using some sort of heap datastructure to maintain heap invariant
 
-        # TODO: Type safety
-        # TODO: Should we bubble exception or handle it here?
-        ret = []
-        for entity in set.intersection((self.components[ct] for ct in component_type)):
-            ret.append((entity, [self.entities[entity][ct] for ct in component_type]))
-        return ret
+        # Do we need lists here to play nice with cache? Not sure...
+        return [(entity, [self.entities[entity][ct] for ct in component_type])
+            for entity in set.intersection(*(self.components[ct] for ct in component_type))]
         
+
+    def clear_world(self) -> None:
+        self.entities.clear()
+        self.components.clear()
+        self.clear_cache()
+        self.next_entity_id = 0
 
     def clear_cache(self) -> None:
         self.get_component.cache_clear()
@@ -77,5 +95,7 @@ class World:
 
     def update(self, *args, **kwargs) -> None:
         # TODO: Is it convention in Python to typehint args, kwargs? In that case, how without losing variadic?
+
+        self.remove_marked_entities()
         for system in self.systems:
             system.update(*args, **kwargs)

@@ -3,9 +3,10 @@ from functools import partial, cache
 from dataclasses import dataclass
 from itertools import count
 from typing import Type, NewType, TypeVar, Generator, Iterable, Callable
+from types import MethodType, FunctionType
 from collections import defaultdict
 from enum import Enum
-from weakref import WE
+from weakref import WeakMethod, ref, ReferenceType, WeakSet
 
 EntityID = NewType("EntityID", int)
 Component = TypeVar("Component")
@@ -104,23 +105,48 @@ class World:
             system.update(*args, **kwargs)
 
 
-subscribers: dict[Event, set[Callable]] = defaultdict(set)
+subscribers: dict[Event, set[ReferenceType[Callable]]] = defaultdict(set)
 
 def subscribe(event_type: Event, handler: Callable) -> None:
-    subscribers[event_type].add(handler)
+    if isinstance(handler, MethodType):
+        subscribers[event_type].add(WeakMethod(handler, partial(unsubscribe, event_type)))
+    elif isinstance(handler, FunctionType):
+        subscribers[event_type].add(ref(handler, partial(unsubscribe, event_type)))
 
 
 def unsubscribe(event_type: Event, handler: Callable) -> None:
-    if handlers := subscribers[event_type]:
+    if handlers := subscribers.get(event_type, None):
+        print(handlers)
         handlers.discard(handler)
-    else:
+    if not subscribers.get(event_type, None):
         del subscribers[event_type]
 
-def publish(event_type: Event, *args, **kwargs) -> None:
-    if handlers := subscribers[event_type]:
-        for handler in handlers:
-            handler(*args, **kwargs)
 
+def publish(event_type: Event, *args, **kwargs) -> None:
+    if handlers := subscribers.get(event_type, None):
+        for handler in handlers:
+            handler()(*args, **kwargs)
+
+
+class A:
+
+    def fn(self):
+        print("Printing")
+
+
+a = A()
+subscribe("test", a.fn)
+publish("test")
+print(subscribers)
+unsubscribe("test", a.fn)
+print(subscribers)
+
+#prin
+#print(subscribers)
+#print(subscribers)
+#subscribe("test", a.fn)
+#print(subscribers)
+#publish("test")
 
 
 # TODO: Fix lapsed listener problem

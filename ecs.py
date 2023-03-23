@@ -2,20 +2,23 @@ from abc import ABC, abstractmethod
 from functools import partial, cache
 from dataclasses import dataclass
 from itertools import count
-from typing import Type, NewType, TypeVar, Generator, Iterable
+from typing import Type, NewType, TypeVar, Generator, Iterable, Callable
 from collections import defaultdict
+from enum import Enum
+from weakref import WE
 
 EntityID = NewType("EntityID", int)
 Component = TypeVar("Component")
 component = partial(dataclass, slots=True)
 
+class Event(Enum):
+    pass
 
 class System(ABC):
 
     @abstractmethod
     def update(self, *args, **kwargs) -> None:
         pass
-
 
 class World:
     
@@ -99,3 +102,29 @@ class World:
         self.remove_marked_entities()
         for system in self.systems:
             system.update(*args, **kwargs)
+
+
+subscribers: dict[Event, set[Callable]] = defaultdict(set)
+
+def subscribe(event_type: Event, handler: Callable) -> None:
+    subscribers[event_type].add(handler)
+
+
+def unsubscribe(event_type: Event, handler: Callable) -> None:
+    if handlers := subscribers[event_type]:
+        handlers.discard(handler)
+    else:
+        del subscribers[event_type]
+
+def publish(event_type: Event, *args, **kwargs) -> None:
+    if handlers := subscribers[event_type]:
+        for handler in handlers:
+            handler(*args, **kwargs)
+
+
+
+# TODO: Fix lapsed listener problem
+
+# Also, why is Python caches trash? Apparently we need to fix the caches since they hold strong references to the instance.... zzzzZZZzz
+# Should we write own cache? Can we create some type of "finalize" object on instances that gets called before GC to force-clear cache?
+# Offers a hack: https://ralph-heinkel.com/blog/avoid-memory-leaks-when-caching-instance-methods-in-python-classes/

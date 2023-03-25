@@ -9,3 +9,9 @@ class Position:
 class Velocity:
     x: int
     y: int
+
+
+@component
+class Renderable:
+    texture: str
+

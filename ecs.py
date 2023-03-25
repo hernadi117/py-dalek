@@ -1,25 +1,17 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from functools import partial, cache
 from dataclasses import dataclass
-from itertools import count
-from typing import Type, NewType, TypeVar, Generator, Iterable, Callable
-from types import MethodType, FunctionType
+from typing import Type, NewType, TypeVar, Callable
+from types import MethodType
 from collections import defaultdict
 from enum import Enum
-from weakref import WeakMethod, ref, ReferenceType, WeakSet
+from weakref import WeakMethod, ref, ReferenceType
 
 EntityID = NewType("EntityID", int)
 Component = TypeVar("Component")
 component = partial(dataclass, slots=True)
 
-class Event(Enum):
-    pass
-
-class System(ABC):
-
-    @abstractmethod
-    def update(self, *args, **kwargs) -> None:
-        pass
 
 class World:
     
@@ -27,17 +19,17 @@ class World:
         self.entities: dict[EntityID, dict[Type[Component], Component]] = defaultdict(dict)
         self.components: defaultdict[Type[Component], set[EntityID]] = defaultdict(set)
         self.systems: list[System] = []
-        self.next_entity_id: EntityID = EntityID(0)
+        self.current_entity_id: EntityID = EntityID(0)
         self.to_remove: set[EntityID] = set()
 
 
-    def next_id(self) -> EntityID:
-        self.next_entity_id, next_id = self.next_entity_id + 1, self.next_entity_id
+    def new_id(self) -> EntityID:
+        self.current_entity_id, next_id = self.current_entity_id + 1, self.current_entity_id
         return next_id
 
     def add_entity(self, *components: Component) -> EntityID:
         # Perf improvement capability: bind dicts to local scope first.
-        entity = self.next_id() # Should skip this function and update at end instead?
+        entity = self.new_id() # Should skip this function and update at end instead?
         for component in components:
             ct = type(component) # Should we Walrus operator to save one line? hehe
             self.entities[entity][ct] = component
@@ -45,7 +37,7 @@ class World:
         return entity
     
     def mark_entity_for_removal(self, *entity: EntityID) -> None:
-        self.to_remove.update(entity)
+        self.to_remove.update(*entity)
     
     def remove_marked_entities(self) -> None:
         for entity in self.to_remove:
@@ -78,20 +70,31 @@ class World:
         # Perf improvement capability: sort sets by length first since intersection is: O(min(len(set1), len(set2), ..., len(setn)))
         # possibly store sets using some sort of heap datastructure to maintain heap invariant
 
-        # Do we need lists here to play nice with cache? Not sure...
         return [(entity, [self.entities[entity][ct] for ct in component_type])
             for entity in set.intersection(*(self.components[ct] for ct in component_type))]
         
+
+    @cache
+    def component_for(self, entity: EntityID, *component_type: Type[Component]) -> list[Component]:
+        return [self.entities[entity][ct] for ct in component_type]
+
+
+    @cache
+    def all_components_for(self, entity: EntityID) -> list[tuple[Type[Component], Component]]:
+        return list(self.entities[entity].items())
+
 
     def clear_world(self) -> None:
         self.entities.clear()
         self.components.clear()
         self.clear_cache()
-        self.next_entity_id = 0
+        self.current_entity_id = EntityID(0)
 
     def clear_cache(self) -> None:
         self.get_component.cache_clear()
         self.has_component.cache_clear()
+        self.component_for.cache_clear()
+        self.all_components_for.cache_clear()
 
     def add_system(self, *system: System) -> None:
         self.systems.extend(*system)
@@ -102,7 +105,7 @@ class World:
 
         self.remove_marked_entities()
         for system in self.systems:
-            system.update(*args, **kwargs)
+            system.update(self, *args, **kwargs)
 
 
 subscribers: dict[Event, set[ReferenceType[Callable]]] = defaultdict(set)
@@ -110,43 +113,34 @@ subscribers: dict[Event, set[ReferenceType[Callable]]] = defaultdict(set)
 def subscribe(event_type: Event, handler: Callable) -> None:
     if isinstance(handler, MethodType):
         subscribers[event_type].add(WeakMethod(handler, partial(unsubscribe, event_type)))
-    elif isinstance(handler, FunctionType):
+    else:
         subscribers[event_type].add(ref(handler, partial(unsubscribe, event_type)))
 
 
 def unsubscribe(event_type: Event, handler: Callable) -> None:
     if handlers := subscribers.get(event_type, None):
-        print(handlers)
         handlers.discard(handler)
-    if not subscribers.get(event_type, None):
+    if handlers is not None and not handlers:
         del subscribers[event_type]
 
 
 def publish(event_type: Event, *args, **kwargs) -> None:
-    if handlers := subscribers.get(event_type, None):
-        for handler in handlers:
-            handler()(*args, **kwargs)
+    for handler in subscribers.get(event_type, ()):
+        handler()(*args, **kwargs)
 
 
-class A:
+class Event(Enum):
+    pass
 
-    def fn(self):
-        print("Printing")
+class System(ABC):
+
+    @abstractmethod
+    def update(self, world: World, *args, **kwargs) -> None:
+        pass
 
 
-a = A()
-subscribe("test", a.fn)
-publish("test")
-print(subscribers)
-unsubscribe("test", a.fn)
-print(subscribers)
 
-#prin
-#print(subscribers)
-#print(subscribers)
-#subscribe("test", a.fn)
-#print(subscribers)
-#publish("test")
+
 
 
 # TODO: Fix lapsed listener problem

@@ -14,6 +14,8 @@ component = partial(dataclass, slots=True)
 
 
 class World:
+
+    #TODO: Investigate usage of weakly referenced cache decorators.
     
     def __init__(self) -> None:
         self.entities: dict[EntityID, dict[Type[Component], Component]] = defaultdict(dict)
@@ -101,7 +103,8 @@ class World:
 
 
     def update(self, *args, **kwargs) -> None:
-        # TODO: Is it convention in Python to typehint args, kwargs? In that case, how without losing variadic?
+        # TODO: Is it convention in Python to typehint args, kwargs? In that case, how without making
+        # method non-variadic?
 
         self.remove_marked_entities()
         for system in self.systems:

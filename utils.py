@@ -5,6 +5,8 @@ from typing import NamedTuple
 from ecs import Component
 from components import Animation, Position, Velocity, Renderable, AI, Player
 
+# TODO: Add typehints but my laptop sucks so bad I cannot get any VSCode extensions to work properly.
+
 TileSize = NamedTuple("TileSize", width=int, height=int)
 TILE_SIZE = TileSize(16, 16)
 

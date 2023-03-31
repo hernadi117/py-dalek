@@ -1,9 +1,11 @@
-from ecs import System, subscribe, publish, World
+from ecs import System, publish, World
 from components import Position, Velocity, Renderable, Animation, AI, Player
 import pygame as pg
 from random import random
 from utils import get_animation_sheet
 from random import randrange
+
+# TODO: Add typehints but my laptop sucks so bad I cannot get any VSCode extensions to work properly.
 
 
 class MovementSystem(System):
@@ -147,6 +149,7 @@ class CollisionSystem(System):
         for entity_id, (pos, vel) in world.get_component(Position, Velocity):
             x, y = pos.x + vel.x, pos.y + vel.y
             if not self.valid_move(x, y):
+                # TODO: Add "wall-sliding" when Daleks wants to go diagonally into wall.
                 vel.x = 0
                 vel.y = 0
             elif (x, y) in self.scraps:

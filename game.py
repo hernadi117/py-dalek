@@ -1,6 +1,6 @@
 import ecs
 import systems
-from components import Position, Renderable, Velocity, Player
+from components import Position
 import pygame as pg
 import utils
 

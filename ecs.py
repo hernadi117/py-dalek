@@ -31,9 +31,9 @@ class World:
 
     def add_entity(self, *components: Component) -> EntityID:
         # Perf improvement capability: bind dicts to local scope first.
-        entity = self.new_id() # Should skip this function and update at end instead?
+        entity = self.new_id()
         for component in components:
-            ct = type(component) # Should we Walrus operator to save one line? hehe
+            ct = type(component)
             self.entities[entity][ct] = component
             self.components[ct].add(entity)
         return entity
@@ -145,14 +145,3 @@ class System(ABC):
     @abstractmethod
     def update(self, world: World, *args, **kwargs) -> None:
         pass
-
-
-
-
-
-
-# TODO: Fix lapsed listener problem
-
-# Also, why is Python caches trash? Apparently we need to fix the caches since they hold strong references to the instance.... zzzzZZZzz
-# Should we write own cache? Can we create some type of "finalize" object on instances that gets called before GC to force-clear cache?
-# Offers a hack: https://ralph-heinkel.com/blog/avoid-memory-leaks-when-caching-instance-methods-in-python-classes/

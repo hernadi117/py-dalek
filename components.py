@@ -14,6 +14,11 @@ class Velocity:
 
 
 @component
+class AI:
+    pass
+
+
+@component
 class Renderable:
     sprite: pg.Surface
 
@@ -23,3 +28,9 @@ class Animation:
     frame_dt: int
     curr: int = 0
     elapsed: int = 0
+    once: bool = False
+
+
+@component
+class Player:
+    pass

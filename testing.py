@@ -1,9 +1,10 @@
 import ecs
 import systems
-from components import Position, Renderable, Velocity
+from components import Position, Renderable, Velocity, Player
 import pygame as pg
 from utils import load_map
-from tiles import get_tile_map, get_animated_tile_components
+from tiles import get_tile_map, get_animated_tile_components, get_dalek_components
+from itertools import chain
 
 
 #world = ecs.World()
@@ -36,26 +37,49 @@ def main():
     pg.init()
     window = pg.display.set_mode((len(type_map[0]) * 16 * 3, len(type_map) * 16 * 3), pg.DOUBLEBUF)
     pg.display.set_caption("Best Game")
+
+
     clock = pg.time.Clock()
     world = ecs.World()
-    player = world.add_entity(Position(4, 3), Renderable(pg.Rect(0, 0, 0, 0)), Velocity(0, 0))
-    ctrl = systems.InputSystem()
+    sprite: pg.Surface = pg.Surface((48, 48)).convert()
+    player = world.add_entity(Position(10, 1), Renderable(sprite), Velocity(0, 0), Player())
+    ctrl = systems.InputSystem(player)
+    movement = systems.MovementSystem()
     render = systems.RenderSystem(window, get_tile_map(type_map))
     animation = systems.AnimationSystem()
+    ai_ctrl = systems.EnemyControl()
 
+    wall_pos = set()
     for comps in get_animated_tile_components(type_map):
-        print(comps)
         world.add_entity(*comps)
-
+        for comp in comps:
+            if isinstance(comp, Position):
+                wall_pos.add((comp.x, comp.y))
     
+    for comps in get_dalek_components(type_map):
+        world.add_entity(*comps)
+    
+    
+    collision = systems.CollisionSystem(len(type_map[0]) - 1, len(type_map) - 1, 0, 0, wall_pos)
+    dalek_sfx = systems.DalekSFXSystem()
 
-    world.add_system([animation, render])
+    ecs.subscribe("input", ctrl.update)
+    ecs.subscribe("move", ai_ctrl.enable)
+    ecs.subscribe("move", collision.enable)
+    ecs.subscribe("move", movement.enable)
+    ecs.subscribe("cancel_move", movement.disable)
+    ecs.subscribe("dalek_collision", dalek_sfx.update)
+
+    world.add_system([ai_ctrl, collision, movement, animation, render])
 
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 pg.quit()
                 break
+            if event.type == pg.KEYDOWN:
+                ecs.publish("input", world, event.key)
+
         world.update(clock)
         clock.tick(60)
 

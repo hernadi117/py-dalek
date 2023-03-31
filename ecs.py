@@ -86,6 +86,11 @@ class World:
         return list(self.entities[entity].items())
 
 
+    def get_system(self, system_type: Type[System]) -> System:
+        for system in self.systems:
+            if type(system) is system_type:
+                return system
+
     def clear_world(self) -> None:
         self.entities.clear()
         self.components.clear()

@@ -2,7 +2,8 @@ from ecs import System, subscribe, publish, World
 from components import Position, Velocity, Renderable, Animation, AI, Player
 import pygame as pg
 from random import random
-from tiles import get_animation_sheet
+from utils import get_animation_sheet
+from random import randrange
 
 
 class MovementSystem(System):
@@ -63,7 +64,7 @@ class AnimationSystem(System):
                 anim.elapsed = 0
                 if anim.curr >= len(anim.sheet):
                     if anim.once:
-                        world.to_remove(entity_id)
+                        world.mark_entity_for_removal((entity_id,))
                     else:
                         anim.curr = 0
 
@@ -75,22 +76,49 @@ class InputSystem(System):
         self.player = player
 
     
-    def update(self, world: World, direction):
+    def update(self, world: World, key):
         
         for vel in world.component_for(self.player, Velocity):
-            if direction == pg.K_LEFT:
-                    vel.x = -1
-                    vel.y = 0
-            if direction == pg.K_RIGHT:
-                    vel.x = 1
-                    vel.y = 0
-            if direction == pg.K_UP:
-                    vel.x = 0
-                    vel.y = -1
-            if direction == pg.K_DOWN:
-                    vel.x = 0
-                    vel.y = 1
-            publish("move")
+            if key == pg.K_LEFT:
+                vel.x = -1
+                vel.y = 0
+                publish("move")
+            elif key == pg.K_RIGHT:
+                vel.x = 1
+                vel.y = 0
+                publish("move")
+            elif key == pg.K_UP:
+                vel.x = 0
+                vel.y = -1
+                publish("move")
+            elif key == pg.K_DOWN:
+                vel.x = 0
+                vel.y = 1
+                publish("move")
+            elif key == pg.K_x:
+                publish("teleport", world)
+                publish("move")
+            
+
+
+class TeleportSystem(System):
+    
+    def __init__(self, player_id) -> None:
+        super().__init__()
+        self.player_id = player_id
+
+
+    def update(self, world: World):
+        collisions = world.get_system(CollisionSystem)
+        pos = world.component_for(self.player_id, Position)[0]
+        while True:
+            x = randrange(collisions.min_x, collisions.max_x)
+            y = randrange(collisions.min_y, collisions.max_y)
+            if collisions.valid_move(x, y) and (x, y) not in collisions.scraps:
+                pos.x = x
+                pos.y = y
+                break
+
 
 
 class CollisionSystem(System):
@@ -110,37 +138,38 @@ class CollisionSystem(System):
             return
 
         player_id, (pos, vel, _) = world.get_component(Position, Velocity, Player)[0]
-        if not self.valid_move(pos.x + vel.x, pos.y + vel.y):
+        if not self.valid_move(x := pos.x + vel.x, y := pos.y + vel.y) or (x, y) in self.scraps:
             publish("cancel_move")
             return
 
-        collision = {}
+        entity_collision = {}
         occupied = {}
         for entity_id, (pos, vel) in world.get_component(Position, Velocity):
             x, y = pos.x + vel.x, pos.y + vel.y
             if not self.valid_move(x, y):
                 vel.x = 0
                 vel.y = 0
+            elif (x, y) in self.scraps:
+                entity_collision[(entity_id, entity_id)] = (x, y)
             elif (x, y) not in occupied:
                 occupied[(x, y)] = entity_id
             else:
-                collision[(entity_id, occupied[(x, y)])] = (x, y)
-        
-        self.handle_entity_collision(world, collision, player_id)
+                entity_collision[(entity_id, occupied[(x, y)])] = (x, y)
+        self.handle_entity_collision(world, entity_collision, player_id)
         self.move = False
 
     def handle_entity_collision(self, world: World, collision, player_id):
         dalek_collisions = []
         for entities, (x, y) in collision.items():
             if player_id in entities:
-                print("game over")
-                #publish("game_over")
-                world.mark_entity_for_removal(entities)
-            dalek_collisions.append(Position(x, y))
+                publish("game_over", world)
+            elif entities[0] == entities[1]:
+                publish("scrap_collision", world, (Position(x, y),))
+            else:
+                dalek_collisions.append(Position(x, y))
+            world.mark_entity_for_removal(entities)
         self.add_scrap(dalek_collisions)
         publish("dalek_collision", world, dalek_collisions)
-
-    
 
 
     def within_map(self, x, y) -> bool:
@@ -151,16 +180,16 @@ class CollisionSystem(System):
         return (x, y) in self.walls
 
 
-    def valid_move(self, x, y):
+    def valid_move(self, x: int, y: int) -> bool:
         return self.within_map(x, y) and not self.collide_wall(x, y)
 
-    def enable(self):
+    def enable(self) -> None:
         self.move = True
 
     
-    def add_scrap(self, *pos):
+    def add_scrap(self, pos: list[Position]) -> None:
         for p in pos:
-            self.scrap.add((p.x, p.y))
+            self.scraps.add((p.x, p.y))
 
 
 class EnemyControl(System):
@@ -207,7 +236,7 @@ class DalekSFXSystem(System):
 
     def __init__(self) -> None:
         super().__init__()
-        self.anim_sheet = get_animation_sheet(pg.image.load("assets/flame_tile_sheet.png").convert_alpha(), 16, 3)
+        self.anim_sheet = get_animation_sheet(pg.image.load("assets/explosion_sheet.png").convert_alpha(), 48, 1, 1)
         
 
     def update(self, world: World, positions: list[Position]):
@@ -221,9 +250,33 @@ class DalekScrapSystem(System):
 
     def __init__(self) -> None:
         super().__init__()
-        self.sprite = ...
+        self.anim_sheet = get_animation_sheet(pg.image.load("assets/dalek_scrap_sheet.png").convert_alpha(), 48, 1, 1)
 
 
-    def update(self, world: World, pos):
-        pass
+    def update(self, world: World, positions: list[Position]):
+        for pos in positions:
+            world.add_entity(Position(x=pos.x, y=pos.y),
+                            Animation(sheet=self.anim_sheet, frame_dt=60),
+                            Renderable(self.anim_sheet[0]))
             
+
+class GameObjectiveSystem(System):
+    
+    def __init__(self) -> None:
+        super().__init__()
+    
+
+    def update(self, world: World, *args):
+
+        # TODO: Add game termination.
+
+        if not world.get_component(AI):
+            print("You won.")
+            pg.quit()
+    
+
+    def lost_game(self, world):
+        # TODO: Add game termination.
+        print("Game over.")
+        pg.quit()
+        

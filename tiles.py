@@ -3,7 +3,7 @@ import pygame as pg
 from random import choices
 from typing import NamedTuple
 from ecs import Component
-from components import Animation, Position, Velocity, Renderable, AI
+from components import Animation, Position, Velocity, Renderable, AI, Player
 
 TileSize = NamedTuple("TileSize", width=int, height=int)
 TILE_SIZE = TileSize(16, 16)
@@ -27,13 +27,26 @@ def get_tile_map(tiles: list[list[TileType]]) -> list[list[pg.Surface]]:
     return [[tiletype_to_sprite(sheet, tile) for tile in line] for line in tiles]
 
 
+def get_player_components(tiles: list[list[TileType]]) -> list[Component]:
+    sheet = pg.image.load("assets/player_sheet.png").convert_alpha()
+    tt = TileSize(48, 48)
+    for row_nr, row in enumerate(tiles):
+        for col_nr, tile_type in enumerate(row):
+            if tile_type == TileType.DOCTOR:
+                sprite = get_tile(sheet, tt, (0, 0), (0, 0, tt.width, tt.height), 1)
+                return [Position(x=col_nr, y=row_nr), Velocity(0, 0), Renderable(sprite), Player()]
+    return []
+
+
 def get_animated_tile_components(tiles: list[list[TileType]]) -> list[list[Component]]:
     sheet = pg.image.load("assets/flame_tile_sheet.png").convert_alpha()
     components: list[list[Component]] = []
     for row_nr, row in enumerate(tiles):
         for col_nr, tile_type in enumerate(row):
             if anim_sheet := tiletype_to_animation_sheet(sheet, tile_type):
-                components.append([Animation(sheet=anim_sheet, frame_dt=120), Position(x=col_nr, y=row_nr), Renderable(sprite=anim_sheet[0])])
+                components.append([Animation(sheet=anim_sheet, frame_dt=120),
+                                   Position(x=col_nr, y=row_nr),
+                                   Renderable(sprite=anim_sheet[0])])
     return components
 
 
@@ -84,17 +97,17 @@ def tiletype_to_sprite(sheet: pg.Surface, tiletype: TileType) -> pg.Surface:
             return get_floor_tile(sheet, TILE_SIZE, (0, 0), 0, scale)
 
 
-def get_animation_sheet(sheet: pg.Surface, dx: int, scale: float = 1) -> pg.Surface:
+def get_animation_sheet(sheet: pg.Surface, dx: int, scale_x: float = 1, scale_y: float = 1) -> pg.Surface:
     animation_sheet: pg.Surface = []
     width, height = sheet.get_width(), sheet.get_height()
     for x in range(0, width - 1, dx):
         sprite: pg.Surface = pg.Surface((dx, height), pg.SRCALPHA).convert_alpha()
         sprite.blit(sheet, (0, 0), (x, 0, dx, height))
-        animation_sheet.append(pg.transform.scale(sprite, (dx * scale, height * scale / 3)))
+        animation_sheet.append(pg.transform.scale(sprite, (dx * scale_x, height * scale_y)))
     return animation_sheet
 
 def tiletype_to_animation_sheet(sheet: pg.Surface, tiletype: TileType) -> list[pg.Surface]:
     match tiletype:
         case TileType.WALL:
-            return get_animation_sheet(sheet, 16, 3)
+            return get_animation_sheet(sheet, 16, 3, 1)
     return []

@@ -18,6 +18,7 @@ class Position:
     x: int
     y: int
 
+
 @component
 class Velocity:
     """
@@ -46,6 +47,7 @@ class Renderable:
     sprite: the sprite to be rendered
     """
     sprite: pg.Surface
+
 
 @component
 class Animation:

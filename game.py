@@ -174,9 +174,7 @@ def main() -> None:
     ecs.subscribe("teleport", teleport.update)
     ecs.subscribe("game_over", objective.lost_game)
     
-
     done = False
-    won = False
     while not done:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -192,6 +190,7 @@ def main() -> None:
         done = objective.done
         if done:
             end_screen(clock, window, won)
+
 
 if __name__ == "__main__":
     main()

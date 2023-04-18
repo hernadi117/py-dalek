@@ -34,7 +34,6 @@ class MovementSystem(System):
         super().__init__()
         self.move = False
 
-
     def update(self, world: World, *args) -> None:
         """
         Update the position of entities based on their velocity.
@@ -56,7 +55,6 @@ class MovementSystem(System):
             pos.y += vel.y
         self.move = False
         
-
     def enable(self):
         """
         Enable the MovementSystem.
@@ -103,7 +101,6 @@ class RenderSystem(System):
         self.window = window
         self.tile_map = tile_map
     
-
     def update(self, world: World, *args) -> None:
         """
         Update the window with the current state of the world.
@@ -140,7 +137,6 @@ class AnimationSystem(System):
         Initialize a new AnimationSystem.
         """
         super().__init__()
-    
     
     def update(self, world: World, dt: pg.time.Clock, *args):
         """
@@ -189,7 +185,6 @@ class InputSystem(System):
         super().__init__()
         self.player = player
 
-    
     def update(self, world: World, key):
         """
         Update the velocity of the player entity based on the given keyboard event.
@@ -227,7 +222,6 @@ class InputSystem(System):
                 publish("move")
             
 
-
 class TeleportSystem(System):
     """
     System that handles teleporting the player to a random location within the collision bounds of the game world.
@@ -242,7 +236,6 @@ class TeleportSystem(System):
         """
         super().__init__()
         self.player_id = player_id
-
 
     def update(self, world: World):
         """
@@ -261,7 +254,6 @@ class TeleportSystem(System):
                 pos.x = x
                 pos.y = y
                 break
-
 
 
 class CollisionSystem(System):
@@ -297,7 +289,6 @@ class CollisionSystem(System):
         self.scraps = set()
         self.move = False
 
-    
     def update(self, world: World, *args):
         """
         Updates the CollisionSystem based on the current state of the game world.
@@ -334,7 +325,6 @@ class CollisionSystem(System):
                 entity_collision[(entity_id, occupied[(x, y)])] = (x, y)
         self.handle_entity_collision(world, entity_collision, player_id)
         self.move = False
-
 
     def wall_slide_handler(self, pos: Position, vel: Velocity) -> None:
         """
@@ -375,7 +365,6 @@ class CollisionSystem(System):
             vel.x = 0
             vel.y = 0
 
-
     def handle_entity_collision(self, world: World, collision, player_id):
         """
         Handles collisions between entities in the game world.
@@ -397,7 +386,6 @@ class CollisionSystem(System):
         self.add_scrap(dalek_collisions)
         publish("dalek_collision", world, dalek_collisions)
 
-
     def within_map(self, x: int, y: int) -> bool:
         """
         Checks if coordinates are within the map boundaries.
@@ -408,7 +396,6 @@ class CollisionSystem(System):
         """
         return self.min_x < x < self.max_x and self.min_y < y < self.max_y
 
-
     def collide_wall(self, x: int, y: int) -> bool:
         """
         Checks if coordinates overlap with a wall.
@@ -418,7 +405,6 @@ class CollisionSystem(System):
             y: y-coordinate
         """
         return (x, y) in self.walls
-
 
     def valid_move(self, x: int, y: int) -> bool:
         """
@@ -436,7 +422,6 @@ class CollisionSystem(System):
         """
         self.move = True
 
-    
     def add_scrap(self, pos: list[Position]) -> None:
         """
         Adds scraps to be collidable and thus objects for collision.
@@ -461,7 +446,6 @@ class EnemyControl(System):
         super().__init__()
         self.move = False
 
-    
     def update(self, world: World, *args):
         """
         Updates the positions of AI entities based on the position of the Player entity.
@@ -483,7 +467,6 @@ class EnemyControl(System):
 
         self.move = False
 
-    
     def direction_to_go(self, pos_x: int, pos_y: int, target_x: int, target_y: int):
         """
         Calculates the direction for an AI entity to move based on its current position and
@@ -530,7 +513,6 @@ class DalekSFXSystem(System):
         super().__init__()
         self.anim_sheet = get_animation_sheet(pg.image.load("assets/explosion_sheet.png").convert_alpha(), 48, 1, 1)
         
-
     def update(self, world: World, positions: list[Position]):
         """
         Updates the DalekSFXSystem.
@@ -590,7 +572,6 @@ class GameObjectiveSystem(System):
         self.won = False
         self.done = False
     
-
     def update(self, world: World, *args):
         """
         Update the system by checking if the player has won or lost the game.
@@ -604,7 +585,6 @@ class GameObjectiveSystem(System):
             self.done = True
             self.won = True
     
-
     def lost_game(self, world):
         """
         Terminate the game when the player loses.

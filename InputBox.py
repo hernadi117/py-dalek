@@ -5,6 +5,7 @@ Last edited: 2023-04-18
 
 import pygame as pg
 
+
 class InputBox:
 
     def __init__(self, x, y, width, height, text=""):

@@ -5,6 +5,7 @@ Last edited: 2023-04-18
 
 import pygame as pg
 
+
 class Button:
     def __init__(self, width, height, text, pos, background_color=(255, 255, 255), text_color=(0, 0, 0)):
         self.width = width

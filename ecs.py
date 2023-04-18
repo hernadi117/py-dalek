@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Type, NewType, TypeVar, Callable
 from types import MethodType
 from collections import defaultdict
-from enum import Enum
 from weakref import WeakMethod, ref, ReferenceType
 
 EntityID = NewType("EntityID", int)
@@ -31,7 +30,7 @@ class World:
     to_remove: a set containing all entities to be removed.
     """
 
-    #TODO: Investigate usage of weakly referenced cache decorators.
+    # TODO: Investigate usage of weakly referenced cache decorators.
     
     def __init__(self) -> None:
         self.entities: dict[EntityID, dict[Type[Component], Component]] = defaultdict(dict)
@@ -39,7 +38,6 @@ class World:
         self.systems: list[System] = []
         self.current_entity_id: EntityID = EntityID(0)
         self.to_remove: set[EntityID] = set()
-
 
     def new_id(self) -> EntityID:
         """
@@ -93,7 +91,6 @@ class World:
         self.to_remove.clear()
         self.clear_cache()
 
-
     @cache
     def has_component(self, entity: EntityID, *component_type: Type[Component]) -> bool:
         """
@@ -110,7 +107,6 @@ class World:
         # Perf improvement capability: cache this calculation.
         # Maybe remove if we do not need it.
         return all(ct in self.entities[entity] for ct in component_type)
-    
     
     @cache
     def get_component(self, *component_type: Type[Component]) -> list[tuple[EntityID, list[Component]]]:
@@ -129,9 +125,8 @@ class World:
         # possibly store sets using some sort of heap to maintain heap invariant
 
         return [(entity, [self.entities[entity][ct] for ct in component_type])
-            for entity in set.intersection(*(self.components[ct] for ct in component_type))]
+                for entity in set.intersection(*(self.components[ct] for ct in component_type))]
         
-
     @cache
     def component_for(self, entity: EntityID, *component_type: Type[Component]) -> list[Component]:
         """
@@ -145,7 +140,6 @@ class World:
         A list of components of the specified types attached to the entity.
         """
         return [self.entities[entity][ct] for ct in component_type]
-
 
     @cache
     def all_components_for(self, entity: EntityID) -> list[tuple[Type[Component], Component]]:
@@ -161,7 +155,6 @@ class World:
         """
 
         return list(self.entities[entity].items())
-
 
     def get_system(self, system_type: Type[System]) -> System:
         """
@@ -204,7 +197,6 @@ class World:
         """
         self.systems.extend(*system)
 
-
     def update(self, *args, **kwargs) -> None:
         """
         Update the world by calling the update method of each system with the specified arguments.
@@ -221,9 +213,10 @@ class World:
             system.update(self, *args, **kwargs)
 
 
-subscribers: dict[Event, set[ReferenceType[Callable]]] = defaultdict(set)
+subscribers: dict[str, set[ReferenceType[Callable]]] = defaultdict(set)
 
-def subscribe(event_type: Event, handler: Callable) -> None:
+
+def subscribe(event_type: str, handler: Callable) -> None:
     """
     Subscribe a callable to an event.
 
@@ -237,7 +230,7 @@ def subscribe(event_type: Event, handler: Callable) -> None:
         subscribers[event_type].add(ref(handler, partial(unsubscribe, event_type)))
 
 
-def unsubscribe(event_type: Event, handler: Callable) -> None:
+def unsubscribe(event_type: str, handler: Callable) -> None:
     """
     Unsubscribe a callable from an event.
 
@@ -251,7 +244,7 @@ def unsubscribe(event_type: Event, handler: Callable) -> None:
         del subscribers[event_type]
 
 
-def publish(event_type: Event, *args, **kwargs) -> None:
+def publish(event_type: str, *args, **kwargs) -> None:
     """
     Publish an event to all of its subscribers.
 
@@ -263,10 +256,6 @@ def publish(event_type: Event, *args, **kwargs) -> None:
     for handler in subscribers.get(event_type, ()):
         handler()(*args, **kwargs)
 
-
-class Event(Enum):
-    """Enumeration of all available events."""
-    pass
 
 class System(ABC):
     """

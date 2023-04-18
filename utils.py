@@ -32,6 +32,7 @@ class TileType(Enum):
 class LineLengthError(ValueError):
     pass
 
+
 class InvalidCharacterError(ValueError):
     pass
 
@@ -65,7 +66,7 @@ def load_map(file_name: str) -> list[list[TileType]]:
         raw_map = read_map_file(file_name)
         validate_map(raw_map)
         return parse_map(raw_map, len(raw_map), len(raw_map[0]))
-    except IOError as e:
+    except IOError:
         return f"The file could not be located or accessed."
     except LineLengthError as e:
         return f"All lines must be of equal length. Line {e.args[0]} has invalid length."
@@ -222,6 +223,7 @@ def get_dalek_components(tiles: list[list[TileType]]) -> list[list[Component]]:
                 components.append([Position(x=col_nr, y=row_nr), Velocity(0, 0), Renderable(sprite), AI()])
     return components
 
+
 def get_floor_tile(sheet: pg.Surface, size: TileSize, dest: tuple[int, int], index: int, scale: float = 1) -> pg.Surface:
     """
     Given a spritesheet, the size of a tile, the location of the tile in the spritesheet,
@@ -327,6 +329,7 @@ def get_animation_sheet(sheet: pg.Surface, dx: int, scale_x: float = 1, scale_y:
         sprite.blit(sheet, (0, 0), (x, 0, dx, height))
         animation_sheet.append(pg.transform.scale(sprite, (dx * scale_x, height * scale_y)))
     return animation_sheet
+
 
 def tiletype_to_animation_sheet(sheet: pg.Surface, tiletype: TileType) -> list[pg.Surface]:
     """

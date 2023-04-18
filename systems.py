@@ -1,3 +1,8 @@
+"""
+Author: Victor Hernadi
+Last edited: 2023-04-18
+"""
+
 from ecs import System, publish, World
 from components import Position, Velocity, Renderable, Animation, AI, Player
 import pygame as pg

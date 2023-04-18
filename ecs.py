@@ -1,3 +1,8 @@
+"""
+Author: Victor Hernadi
+Last edited: 2023-04-18
+"""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from functools import partial, cache

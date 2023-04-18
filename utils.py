@@ -1,3 +1,8 @@
+"""
+Author: Victor Hernadi
+Last edited: 2023-04-18
+"""
+
 from enum import Enum, auto
 import pygame as pg
 from random import choices

@@ -1,3 +1,8 @@
+"""
+Author: Victor Hernadi
+Last edited: 2023-04-18
+"""
+
 import pygame as pg
 
 class Button:

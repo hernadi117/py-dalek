@@ -1,3 +1,8 @@
+"""
+Author: Victor Hernadi
+Last edited: 2023-04-18
+"""
+
 from ecs import component
 import pygame as pg
 

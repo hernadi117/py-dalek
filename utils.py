@@ -61,11 +61,11 @@ def load_map(file_name: str) -> list[list[TileType]]:
         validate_map(raw_map)
         return parse_map(raw_map, len(raw_map), len(raw_map[0]))
     except IOError as e:
-        print(e)
+        return f"The file could not be located or accessed."
     except LineLengthError as e:
-        print(f"All lines must be of equal length. Line {e.args[0]} has invalid length.")
+        return f"All lines must be of equal length. Line {e.args[0]} has invalid length."
     except InvalidCharacterError as e:
-        print(f"Invalid character '{e.args[2]}' found in column {e.args[1]}, line {e.args[0]}.")
+        return f"Invalid character '{e.args[2]}' found in column {e.args[1]}, line {e.args[0]}."
 
 
 def validate_map(raw_map: list[str]) -> list[str]:

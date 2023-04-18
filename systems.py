@@ -137,7 +137,7 @@ class AnimationSystem(System):
         super().__init__()
     
     
-    def update(self, world: World, dt: pg.time.Clock):
+    def update(self, world: World, dt: pg.time.Clock, *args):
         """
         Update the sprite animations of all eligible entities in the world.
 
@@ -312,12 +312,16 @@ class CollisionSystem(System):
         entity_collision = {}
         occupied = {}
         for entity_id, (pos, vel) in world.get_component(Position, Velocity):
+            if entity_id != player_id and not self.valid_move(pos.x + vel.x, pos.y + vel.y):
+                self.wall_slide_handler(pos, vel)
+                if vel.x == 0 and vel.y == 0:
+                    if (pos.x, pos.y) not in occupied:
+                        occupied[(pos.x, pos.y)] = entity_id
+                    else:
+                        entity_collision[(entity_id, occupied[(pos.x, pos.y)])] = (pos.x, pos.y)
+                    continue
             x, y = pos.x + vel.x, pos.y + vel.y
-            if not self.valid_move(x, y):
-                # TODO: Add "wall-sliding" when Daleks wants to go diagonally into wall.
-                vel.x = 0
-                vel.y = 0
-            elif (x, y) in self.scraps:
+            if (x, y) in self.scraps:
                 entity_collision[(entity_id, entity_id)] = (x, y)
             elif (x, y) not in occupied:
                 occupied[(x, y)] = entity_id
@@ -325,6 +329,47 @@ class CollisionSystem(System):
                 entity_collision[(entity_id, occupied[(x, y)])] = (x, y)
         self.handle_entity_collision(world, entity_collision, player_id)
         self.move = False
+
+
+    def wall_slide_handler(self, pos: Position, vel: Velocity) -> None:
+        """
+        This method handles sliding a Dalek along a wall when they hit it. 
+        This method only updates the velocity components of the Dalek, if they are moving in a diagonal direction along a wall,
+        but only if the wall slide is possible, i.e., the next position is still valid.
+
+        Parameters:
+            pos (Position): The current position of the Dalek.
+            vel (Velocity): The current velocity of the Dalek.
+
+        Returns:
+            None
+        """
+        x = pos.x + vel.x
+        y = pos.y + vel.y
+        if vel.x > 0 and vel.y < 0:
+            if self.valid_move(x, pos.y):
+                vel.y = 0
+            if self.valid_move(pos.x, y):
+                vel.x = 0
+        elif vel.x < 0 and vel.y < 0:
+            if self.valid_move(x, pos.y):
+                vel.y = 0
+            if self.valid_move(pos.x, y):
+                vel.x = 0
+        elif vel.x < 0 and vel.y > 0:
+            if self.valid_move(x, pos.y):
+                vel.y = 0
+            if self.valid_move(pos.x, y):
+                vel.x = 0
+        elif vel.x > 0 and vel.y > 0:
+            if self.valid_move(x, pos.y):
+                vel.y = 0
+            if self.valid_move(pos.x, y):
+                vel.x = 0
+        else:
+            vel.x = 0
+            vel.y = 0
+
 
     def handle_entity_collision(self, world: World, collision, player_id):
         """
@@ -339,7 +384,7 @@ class CollisionSystem(System):
         for entities, (x, y) in collision.items():
             if player_id in entities:
                 publish("game_over", world)
-            elif entities[0] == entities[1]:
+            if entities[0] == entities[1]:
                 publish("scrap_collision", world, (Position(x, y),))
             else:
                 dalek_collisions.append(Position(x, y))
@@ -528,12 +573,17 @@ class DalekScrapSystem(System):
 class GameObjectiveSystem(System):
     """
     A system that handles game objectives, such as winning and losing the game.
+    Attributes:
+    done (bool): True if the game is over, else False
+    won (bool): True if the player won, else False
     """
     def __init__(self) -> None:
         """
         Initializes a new instance of the GameObjectiveSystem class.
         """   
         super().__init__()
+        self.won = False
+        self.done = False
     
 
     def update(self, world: World, *args):
@@ -545,11 +595,9 @@ class GameObjectiveSystem(System):
             *args: Additional arguments (not used).
         """
 
-        # TODO: Add game termination.
-
         if not world.get_component(AI):
-            print("You won.")
-            pg.quit()
+            self.done = True
+            self.won = True
     
 
     def lost_game(self, world):
@@ -559,6 +607,5 @@ class GameObjectiveSystem(System):
         Parameters:
         world (World): The game world.
         """
-        # TODO: Add game termination.
-        print("Game over.")
-        pg.quit()
+        self.done = True
+        self.won = False

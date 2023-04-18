@@ -26,8 +26,10 @@ class InputBox:
             else:
                 self.active = False
             
-            self.color = self.active_color if self.active else self.inactive_color
-            
+            if self.active:
+                self.color = self.active_color
+            else:
+                self.color = self.inactive_color  
         
         if event.type == pg.KEYDOWN:
             if self.active:
@@ -39,11 +41,11 @@ class InputBox:
             self.surface = self.font.render(self.text, True, self.color)
 
     def update(self):
-        width = max(200, self.surface.get_width()+10)
+        width = max(250, self.surface.get_width()+10)
         self.rect.w = width
         
     def render(self, window):
         window.blit(self.surface, (self.rect.x+5, self.rect.y+5))
-        pg.draw.rect(window, self.color, self.rect, 2)
+        pg.draw.rect(window, self.color, self.rect, 1)
 
         

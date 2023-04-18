@@ -53,9 +53,9 @@ def menu(window) -> list[list[utils.TileType]]:
     """
     clock = pg.time.Clock()
     pg.font.init()
-    input_box = InputBox(210, 70, 140, 32)
-    button_play = Button((135, 50), "PLAY", (250, 150))
-    button_quit = Button((135, 50), "QUIT", (250, 250))
+    input_box = InputBox(190, 70, 140, 32)
+    button_play = Button(135, 50, "PLAY", (250, 150))
+    button_quit = Button(135, 50, "QUIT", (250, 250))
     done = False
     err_text = ""
     map_txt = "Enter file path of map:"

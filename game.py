@@ -78,6 +78,7 @@ def menu(window) -> list[list[utils.TileType]]:
 
         window.blit(pg.font.SysFont('Comic Sans MS', 25).render(map_txt, False, (255, 255, 255)), (210, 40))
         window.blit(pg.font.SysFont('Comic Sans MS', 28).render(err_text, False, (255, 0, 0)), (70, 110))
+        window.blit(pg.font.SysFont('Comic Sans MS', 30).render("Move with the arrows and teleport with X.", False, (255, 255, 255)), (90, 400))
         pg.display.flip()
         clock.tick(60)
 

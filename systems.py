@@ -9,13 +9,40 @@ from random import randrange
 
 
 class MovementSystem(System):
+    """
+    A system for updating the position of entities based on their velocity.
+
+    This system is responsible for updating the position of entities that have both
+    a Position and Velocity component. When enabled, it will add the velocity vector
+    to the position of each entity on each update.
+
+    Attributes:
+        move (bool): Whether the system is currently enabled to update entity positions.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialize a new MovementSystem.
+
+        By default, the system is disabled and will not update any entity positions.
+        """
         super().__init__()
         self.move = False
 
 
     def update(self, world: World, *args) -> None:
+        """
+        Update the position of entities based on their velocity.
+
+        This method will iterate over all entities in the world that have both a
+        Position and Velocity component, and update their position by adding the
+        velocity vector to it. If the system is currently disabled, no updates will
+        be made.
+
+        Parameters:
+            world (World): The world containing the entities to update.
+            *args: Any additional arguments passed to the update method. (Unused)
+        """
         if not self.move:
             return
         
@@ -26,21 +53,64 @@ class MovementSystem(System):
         
 
     def enable(self):
+        """
+        Enable the MovementSystem.
+
+        This method sets the 'move' attribute to True, allowing the system to update
+        entity positions on subsequent calls to the update method.
+        """
         self.move = True
 
     def disable(self):
+        """
+        Disable the MovementSystem.
+
+        This method sets the 'move' attribute to False, preventing the system from
+        updating entity positions on subsequent calls to the update method.
+        """
         self.move = False
 
 
 class RenderSystem(System):
+    """
+    A system for rendering entities to a Pygame window.
+
+    This system is responsible for rendering all entities in the world that have
+    both a Position and Renderable component. It also renders a fixed background
+    tile map to the window.
+
+    Attributes:
+        window (pg.Surface): The Pygame window to render to.
+        tile_map (list[list[pg.Surface]]): A 2D list of tile surfaces representing the fixed background of the window.
+    """
 
     def __init__(self, window: pg.Surface, tile_map: list[list[pg.Surface]]) -> None:
+        """
+        Initialize a new RenderSystem.
+
+        Parameters:
+            window (pg.Surface): The Pygame window to render to.
+            tile_map (list[list[pg.Surface]]): A 2D list of tile surfaces representing
+                the fixed background of the window.
+        """
+
         super().__init__()
         self.window = window
         self.tile_map = tile_map
     
 
     def update(self, world: World, *args) -> None:
+        """
+        Update the window with the current state of the world.
+
+        This method will render the fixed background tile map to the window, followed
+        by all entities in the world that have both a Position and Renderable component.
+        Finally, it will flip the display to show the updated window.
+
+        Parameters:
+            world (World): The world containing the entities to render.
+            *args: Any additional arguments passed to the update method. (Unused)
+        """
         for x, tile_row in enumerate(self.tile_map):
             for y, tile in enumerate(tile_row):
                 self.window.blit(tile, (y * tile.get_height(), x * tile.get_width()))
@@ -52,12 +122,33 @@ class RenderSystem(System):
 
 
 class AnimationSystem(System):
+    """
+    A system for playing sprite animations on Renderable entities.
+
+    This system updates the sprites of all entities in the world that have
+    both an Animation and Renderable component, based on the elapsed time
+    since the last update.
+    """
 
     def __init__(self) -> None:
+        """
+        Initialize a new AnimationSystem.
+        """
         super().__init__()
-
+    
     
     def update(self, world: World, dt: pg.time.Clock):
+        """
+        Update the sprite animations of all eligible entities in the world.
+
+        This method will update the sprites of all entities in the world that
+        have both an Animation and Renderable component. The elapsed time since
+        the last update is passed in as the 'dt' parameter.
+
+        Parameters:
+            world (World): The world containing the entities to update.
+            dt (pg.time.Clock): The time elapsed since the last update.
+        """
         for entity_id, (anim, render) in world.get_component(Animation, Renderable):
             anim.elapsed += dt.get_time()
             if anim.elapsed >= anim.frame_dt:
@@ -72,13 +163,42 @@ class AnimationSystem(System):
 
 
 class InputSystem(System):
+    """
+    A system for processing player input and updating entity velocities.
+
+    This system listens for keyboard events and updates the Velocity component
+    of the player entity based on the input. It also publishes "move" and "teleport"
+    events as appropriate.
+
+    Attributes:
+        player (EntityID): The player entity to control.
+    """
 
     def __init__(self, player) -> None:
+        """
+        Initialize a new InputSystem.
+
+        Parameters:
+            player (EntityID): The player entity to control.
+        """
         super().__init__()
         self.player = player
 
     
     def update(self, world: World, key):
+        """
+        Update the velocity of the player entity based on the given keyboard event.
+
+        This method will update the Velocity component of the player entity based
+        on the keyboard event passed in as the 'key' parameter. If the key corresponds
+        to a movement direction, the Velocity will be set accordingly and a "move" event
+        will be published. If the key corresponds to a teleport action, a "teleport"
+        event will be published.
+
+        Parameters:
+            world (World): The world containing the entities to update.
+            key (int): The Pygame key code for the pressed key.
+        """
         
         for vel in world.component_for(self.player, Velocity):
             if key == pg.K_LEFT:
@@ -104,13 +224,29 @@ class InputSystem(System):
 
 
 class TeleportSystem(System):
+    """
+    System that handles teleporting the player to a random location within the collision bounds of the game world.
+    """
     
     def __init__(self, player_id) -> None:
+        """
+        Initializes the TeleportSystem instance.
+
+        Parameters:
+            player_id (int): The entity ID of the player.
+        """
         super().__init__()
         self.player_id = player_id
 
 
     def update(self, world: World):
+        """
+        Updates the TeleportSystem instance by teleporting the player to a random location within the collision bounds
+        of the game world.
+
+        Parameters:
+            world (World): The game world.
+        """
         collisions = world.get_system(CollisionSystem)
         pos = world.component_for(self.player_id, Position)[0]
         while True:
@@ -124,7 +260,29 @@ class TeleportSystem(System):
 
 
 class CollisionSystem(System):
+    """
+    A system that handles collisions between entities and the game boundaries and walls.
+
+    Attributes:
+        max_x (int): The maximum x-coordinate of the game world.
+        max_y (int): The maximum y-coordinate of the game world.
+        min_x (int): The minimum x-coordinate of the game world.
+        min_y (int): The minimum y-coordinate of the game world.
+        walls (set): A set of coordinates representing the locations of walls in the game world.
+        scraps (set): A set of coordinates representing the locations of scraps in the game world.
+        move (bool): Flag if the system is active or not this frame.
+    """
     def __init__(self, max_x, max_y, min_x, min_y, walls) -> None:
+        """
+        Initializes a new instance of the CollisionSystem class.
+
+        Parameters:
+            max_x (int): The maximum x-coordinate of the game world.
+            max_y (int): The maximum y-coordinate of the game world.
+            min_x (int): The minimum x-coordinate of the game world.
+            min_y (int): The minimum y-coordinate of the game world.
+            walls (set): A set of coordinates representing the locations of walls in the game world.
+        """
         super().__init__()
         self.max_x = max_x
         self.max_y = max_y
@@ -136,6 +294,13 @@ class CollisionSystem(System):
 
     
     def update(self, world: World, *args):
+        """
+        Updates the CollisionSystem based on the current state of the game world.
+
+        Parameters:
+            world (World): The game world to update.
+            *args: Optional arguments to the update method.
+        """
         if not self.move:
             return
 
@@ -162,6 +327,14 @@ class CollisionSystem(System):
         self.move = False
 
     def handle_entity_collision(self, world: World, collision, player_id):
+        """
+        Handles collisions between entities in the game world.
+
+        Parameters:
+            world (World): The game world.
+            collision (dict): A dictionary containing the entities involved in each collision and their coordinates.
+            player_id (int): The ID of the player entity.
+        """
         dalek_collisions = []
         for entities, (x, y) in collision.items():
             if player_id in entities:
@@ -175,34 +348,78 @@ class CollisionSystem(System):
         publish("dalek_collision", world, dalek_collisions)
 
 
-    def within_map(self, x, y) -> bool:
+    def within_map(self, x: int, y: int) -> bool:
+        """
+        Checks if coordinates are within the map boundaries.
+
+        Parameters:
+            x: x-coordinate
+            y: y-coordinate
+        """
         return self.min_x < x < self.max_x and self.min_y < y < self.max_y
 
 
     def collide_wall(self, x: int, y: int) -> bool:
+        """
+        Checks if coordinates overlap with a wall.
+
+        Parameters:
+            x: x-coordinate
+            y: y-coordinate
+        """
         return (x, y) in self.walls
 
 
     def valid_move(self, x: int, y: int) -> bool:
+        """
+        Checks if coordinates is a valid position to mvoe to.
+
+        Parameters:
+            x: x-coordinate
+            y: y-coordinate
+        """
         return self.within_map(x, y) and not self.collide_wall(x, y)
 
     def enable(self) -> None:
+        """
+        Enable this system to work on subsequent calls to the update method.
+        """
         self.move = True
 
     
     def add_scrap(self, pos: list[Position]) -> None:
+        """
+        Adds scraps to be collidable and thus objects for collision.
+
+        Parameters:
+            pos: list of Position (x, y) coordinates
+        """
         for p in pos:
             self.scraps.add((p.x, p.y))
 
 
 class EnemyControl(System):
+    """
+    The EnemyControl updates the positions of AI entities
+    based on the position of the Player entity.
+    """
 
     def __init__(self) -> None:
+        """
+        Initializes an instance of the EnemyControl class.
+        """
         super().__init__()
         self.move = False
 
     
     def update(self, world: World, *args):
+        """
+        Updates the positions of AI entities based on the position of the Player entity.
+        
+        Parameters:
+            world (World): the game world to update
+            *args: additional arguments to pass to the method (not used in this implementation)
+        """
         if not self.move:
             return
         
@@ -218,6 +435,19 @@ class EnemyControl(System):
 
     
     def direction_to_go(self, pos_x: int, pos_y: int, target_x: int, target_y: int):
+        """
+        Calculates the direction for an AI entity to move based on its current position and
+        the position of the Player entity.
+        
+        Args:
+            pos_x (int): the x-coordinate of the current position of the AI entity
+            pos_y (int): the y-coordinate of the current position of the AI entity
+            target_x (int): the x-coordinate of the current position of the Player entity
+            target_y (int): the y-coordinate of the current position of the Player entity
+        
+        Returns:
+            Tuple: a tuple containing the x and y components of the direction the AI entity should move
+        """
         dx, dy = pos_x - target_x, pos_y - target_y
         vx = (dx < 0) - (dx > 0)
         vy = (dy < 0) - (dy > 0) 
@@ -232,17 +462,33 @@ class EnemyControl(System):
         return vx, vy
 
     def enable(self):
+        """
+        Enables the EnemyControl system to update the positions of AI entities.
+        """
         self.move = True
 
 
 class DalekSFXSystem(System):
+    """
+    A system that creates a visual explosion effect when Daleks are destroyed.
+    """
 
     def __init__(self) -> None:
+        """
+        Initializes a new instance of the DalekSFXSystem class.
+        """
         super().__init__()
         self.anim_sheet = get_animation_sheet(pg.image.load("assets/explosion_sheet.png").convert_alpha(), 48, 1, 1)
         
 
     def update(self, world: World, positions: list[Position]):
+        """
+        Updates the DalekSFXSystem.
+
+        Parameters:
+            world: The game world.
+            positions: A list of Position objects representing the positions of Daleks that were destroyed.
+        """
         for pos in positions:
             world.add_entity(Position(x=pos.x, y=pos.y),
                             Animation(sheet=self.anim_sheet, frame_dt=60, once=True),
@@ -250,13 +496,29 @@ class DalekSFXSystem(System):
             
 
 class DalekScrapSystem(System):
+    """
+    A system that handles creating Dalek scrap and their animations when Daleks are destroyed.
+
+    Attributes:
+    anim_sheet (list[Surface]): The sprite sheet containing the animation frames.
+    """
 
     def __init__(self) -> None:
+        """
+        Initializes a new instance of the DalekScrapSystem class.
+        """   
         super().__init__()
         self.anim_sheet = get_animation_sheet(pg.image.load("assets/dalek_scrap_sheet.png").convert_alpha(), 48, 1, 1)
 
 
     def update(self, world: World, positions: list[Position]):
+        """
+        Update the system by creating Dalek scrap animations at the positions of destroyed Daleks.
+
+        Parameters:
+        world (World): The game world.
+        positions (list[Position]): The positions of the destroyed Daleks.
+        """
         for pos in positions:
             world.add_entity(Position(x=pos.x, y=pos.y),
                             Animation(sheet=self.anim_sheet, frame_dt=60),
@@ -264,12 +526,24 @@ class DalekScrapSystem(System):
             
 
 class GameObjectiveSystem(System):
-    
+    """
+    A system that handles game objectives, such as winning and losing the game.
+    """
     def __init__(self) -> None:
+        """
+        Initializes a new instance of the GameObjectiveSystem class.
+        """   
         super().__init__()
     
 
     def update(self, world: World, *args):
+        """
+        Update the system by checking if the player has won or lost the game.
+
+        Parameters:
+            world (World): The game world.
+            *args: Additional arguments (not used).
+        """
 
         # TODO: Add game termination.
 
@@ -279,7 +553,12 @@ class GameObjectiveSystem(System):
     
 
     def lost_game(self, world):
+        """
+        Terminate the game when the player loses.
+
+        Parameters:
+        world (World): The game world.
+        """
         # TODO: Add game termination.
         print("Game over.")
         pg.quit()
-        
